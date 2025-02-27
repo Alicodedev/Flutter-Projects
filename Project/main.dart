@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
+import 'styles.dart';
 
 void main() {
   runApp(
@@ -73,7 +74,7 @@ class _HomeRouteState extends State<HomeRoute> {
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: Text(
-            'FC builder app',
+            'Futsal builder app',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24.0,
@@ -162,27 +163,12 @@ class _HomeRouteState extends State<HomeRoute> {
 
                 // Submit button
                 Center(
-                  child: SizedBox(
-                    width:200,
-                    height: 50,  // Set custom height
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[700], // Custom background color
-                      foregroundColor: Colors.white, // Text color
-                      shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-
-                     ),
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Internal padding
-                      elevation: 5, // Button shadow
-                      ),
-                      child: Text(
-                        'Create Team',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  child: ElevatedButton(
+                    style: AppStyles.customButtonStyle,
+                    child: Text(
+                      'Create Team',
+                      style: AppStyles.buttonTextStyle,
+                    ),
                     onPressed: () {
                       if (_validateFields()) {
                         _showSnackBar('Validating team information');
@@ -223,7 +209,6 @@ class _HomeRouteState extends State<HomeRoute> {
                     },
                   ),
                 ),
-                ),
               ],
             ),
           ),
@@ -252,6 +237,7 @@ class SecondRoute extends StatelessWidget {
         duration: Duration(seconds: 2),
         action: SnackBarAction(
           label: 'OK',
+
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
@@ -283,7 +269,7 @@ class SecondRoute extends StatelessWidget {
 
     // Show welcome SnackBar when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showSnackBar(context, 'Welcome to your new team page');
+      _showSnackBar(context, 'Welcome to your new team');
     });
 
     return Scaffold(
@@ -309,6 +295,11 @@ class SecondRoute extends StatelessWidget {
             ),
             SizedBox(height: 20),
             ElevatedButton(
+              style: AppStyles.customButtonStyle,
+              child: Text(
+                'Return to Home',
+                style: AppStyles.buttonTextStyle,
+              ),
               onPressed: () {
                 _showSnackBar(context, 'Returning to Home page');
                 Future.delayed(
@@ -316,7 +307,6 @@ class SecondRoute extends StatelessWidget {
                       () => Navigator.pop(context),
                 );
               },
-              child: Text('Return to Home'),
             ),
           ],
         ),
