@@ -71,6 +71,7 @@ class _HomeRouteState extends State<HomeRoute> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.blue,
         title: Text(
             'FC builder app',
           style: TextStyle(
@@ -161,8 +162,27 @@ class _HomeRouteState extends State<HomeRoute> {
 
                 // Submit button
                 Center(
-                  child: ElevatedButton(
-                    child: Text('Create Team'),
+                  child: SizedBox(
+                    width:200,
+                    height: 50,  // Set custom height
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue[700], // Custom background color
+                      foregroundColor: Colors.white, // Text color
+                      shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+
+                     ),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10), // Internal padding
+                      elevation: 5, // Button shadow
+                      ),
+                      child: Text(
+                        'Create Team',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     onPressed: () {
                       if (_validateFields()) {
                         _showSnackBar('Validating team information');
@@ -202,6 +222,7 @@ class _HomeRouteState extends State<HomeRoute> {
                       }
                     },
                   ),
+                ),
                 ),
               ],
             ),
