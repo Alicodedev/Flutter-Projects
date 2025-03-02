@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'styles.dart';
 
 void main() {
@@ -26,11 +27,7 @@ void main() {
 class HomeRoute extends StatefulWidget {
   @override
   _HomeRouteState createState() => _HomeRouteState();
-
-
-
 }
-
 
 class _HomeRouteState extends State<HomeRoute> {
   final _formKey = GlobalKey<FormState>();
@@ -38,6 +35,90 @@ class _HomeRouteState extends State<HomeRoute> {
   final _teamCity = TextEditingController();
   final _teamCountry = TextEditingController();
   late List<TextEditingController> playerControllers;
+  bool isGameInProgress = false;
+
+  Future<void> saveGameData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('teamName', _teamName.text);
+    await prefs.setString('teamCity', _teamCity.text);
+    await prefs.setString('teamCountry', _teamCountry.text);
+
+    // Save player names
+    for (int i = 0; i < playerControllers.length; i++) {
+      await prefs.setString('player_$i', playerControllers[i].text);
+    }
+
+    await prefs.setBool('gameInProgress', true);
+  }
+
+  Future<void> loadGameData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _teamName.text = prefs.getString('teamName') ?? '';
+      _teamCity.text = prefs.getString('teamCity') ?? '';
+      _teamCountry.text = prefs.getString('teamCountry') ?? '';
+
+      // Load player names
+      for (int i = 0; i < playerControllers.length; i++) {
+        playerControllers[i].text = prefs.getString('player_$i') ?? '';
+      }
+
+      isGameInProgress = prefs.getBool('gameInProgress') ?? false;
+    });
+  }
+
+  Future<void> clearGameData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    setState(() {
+      _teamName.clear();
+      _teamCity.clear();
+      _teamCountry.clear();
+      for (var controller in playerControllers) {
+        controller.clear();
+      }
+      isGameInProgress = false;
+    });
+  }
+
+  void showResumeGameDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Resume Game'),
+          content: Text('Would you like to resume the previous game or start a new one?'),
+          actions: [
+            TextButton(
+              child: Text('New Game'),
+              onPressed: () {
+                clearGameData();
+                Navigator.pop(context);
+              },
+            ),
+            TextButton(
+              child: Text('Resume'),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(
+                  context,
+                  '/second',
+                  arguments: {
+                    'teamName': _teamName.text,
+                    'players': playerControllers.map((c) => c.text).toList(),
+                    'resuming': true,
+                  },
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -55,10 +136,15 @@ class _HomeRouteState extends State<HomeRoute> {
   }
 
 
+
+
+
+
   @override
   void initState() {
     super.initState();
     playerControllers = List.generate(5, (index) => TextEditingController());
+    loadGameData(); // Load saved data when app starts
   }
 
   bool _validateFields() {
@@ -70,16 +156,22 @@ class _HomeRouteState extends State<HomeRoute> {
 
   @override
   Widget build(BuildContext context) {
+    // Check for existing game
+    if (isGameInProgress && _teamName.text.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showResumeGameDialog();
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
         title: Text(
-            'Futsal builder app',
+          'Futsal builder app',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 24.0,
           ),
-
         ),
         centerTitle: true,
       ),
@@ -91,7 +183,6 @@ class _HomeRouteState extends State<HomeRoute> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Team Information fields
                 TextFormField(
                   controller: _teamName,
                   decoration: InputDecoration(
@@ -106,7 +197,6 @@ class _HomeRouteState extends State<HomeRoute> {
                   },
                 ),
                 SizedBox(height: 10),
-
                 TextFormField(
                   controller: _teamCity,
                   decoration: InputDecoration(
@@ -121,7 +211,6 @@ class _HomeRouteState extends State<HomeRoute> {
                   },
                 ),
                 SizedBox(height: 10),
-
                 TextFormField(
                   controller: _teamCountry,
                   decoration: InputDecoration(
@@ -136,8 +225,6 @@ class _HomeRouteState extends State<HomeRoute> {
                   },
                 ),
                 SizedBox(height: 20),
-
-                // Player fields
                 ...List.generate(
                   5,
                       (index) => Padding(
@@ -152,16 +239,13 @@ class _HomeRouteState extends State<HomeRoute> {
                         if (value == null || value.isEmpty || !RegExp(r'^[a-zA-Z ]+$').hasMatch(value)) {
                           return 'Please enter player ${index + 1} name';
                         }
-
                         return null;
                       },
                     ),
                   ),
                 ),
-
                 SizedBox(height: 20),
-
-                // Submit button
+                // Replace this entire Center widget and its contents
                 Center(
                   child: ElevatedButton(
                     style: AppStyles.customButtonStyle,
@@ -191,20 +275,21 @@ class _HomeRouteState extends State<HomeRoute> {
                               child: Text("OK"),
                               onPressed: () {
                                 Navigator.pop(context); // Close alert
+                                saveGameData(); // Save the game data
                                 Navigator.pushNamed(
                                   context,
                                   '/second',
                                   arguments: {
                                     'teamName': _teamName.text,
-                                    'players': playerControllers.map((c) =>
-                                    c.text).toList(),
+                                    'players': playerControllers.map((c) => c.text).toList(),
+                                    'resuming': false,
                                   },
                                 );
                               },
                             )
                           ],
                         ).show();
-                        } else {
+                      } else {
                         _showSnackBar('Invalid team information.');
                       }
                     },
@@ -218,6 +303,8 @@ class _HomeRouteState extends State<HomeRoute> {
     );
   }
 
+
+
   @override
   void dispose() {
     _teamName.dispose();
@@ -230,18 +317,37 @@ class _HomeRouteState extends State<HomeRoute> {
   }
 }
 
-
-
-class SecondRoute extends StatefulWidget {  // Changed to StatefulWidget
+class SecondRoute extends StatefulWidget {
   @override
   _SecondRouteState createState() => _SecondRouteState();
 }
 
 class _SecondRouteState extends State<SecondRoute> {
-  // Score tracking
   Map<String, int> scores = {};
   Map<String, int> corners = {};
-  late String teamName; // Add this
+  late String teamName;
+
+  Future<void> saveGameScores() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('${teamName}_score', scores[teamName] ?? 0);
+    await prefs.setInt('opposition_score', scores['Opposition'] ?? 0);
+    await prefs.setInt('${teamName}_corners', corners[teamName] ?? 0);
+    await prefs.setInt('opposition_corners', corners['Opposition'] ?? 0);
+  }
+
+  Future<void> loadGameScores() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      scores = {
+        teamName: prefs.getInt('${teamName}_score') ?? 0,
+        'Opposition': prefs.getInt('opposition_score') ?? 0,
+      };
+      corners = {
+        teamName: prefs.getInt('${teamName}_corners') ?? 0,
+        'Opposition': prefs.getInt('opposition_corners') ?? 0,
+      };
+    });
+  }
 
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -258,30 +364,25 @@ class _SecondRouteState extends State<SecondRoute> {
     );
   }
 
-
-
   @override
   void initState() {
     super.initState();
-    // Initialize scores for both teams to avoid null checks
-    scores = {
-      'Opposition': 0,
-    };
-    corners = {
-      'Opposition': 0,
-    };
+    scores = {'Opposition': 0};
+    corners = {'Opposition': 0};
   }
 
   void _updateScore(String team, int value) {
     setState(() {
       scores[team] = (scores[team] ?? 0) + value;
     });
+    saveGameScores();
   }
 
   void _updateCorners(String team, int value) {
     setState(() {
       corners[team] = (corners[team] ?? 0) + value;
     });
+    saveGameScores();
   }
 
   String _determineWinner() {
@@ -301,11 +402,14 @@ class _SecondRouteState extends State<SecondRoute> {
 
   @override
   Widget build(BuildContext context) {
-
-    //final ScreenArguments? args = ModalRoute.of(context)?.settings.arguments as ScreenArguments?;
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    teamName = args?['teamName'] as String? ?? 'Team'; // Assign to class field
+    teamName = args?['teamName'] as String? ?? 'Team';
     final players = args?['players'] as List<String>? ?? [];
+    final isResuming = args?['resuming'] as bool? ?? false;
+
+    if (isResuming) {
+      loadGameScores();
+    }
 
     if (!scores.containsKey(teamName)) {
       scores[teamName] = 0;
@@ -320,7 +424,6 @@ class _SecondRouteState extends State<SecondRoute> {
         body: Center(child: Text('No team data available')),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -485,27 +588,19 @@ class _SecondRouteState extends State<SecondRoute> {
               children: [
                 ElevatedButton(
                   style: AppStyles.customButtonStyle,
-                  onPressed: () {
-                    // Get the result before clearing scores
+                  onPressed: () async {
                     String result = _determineWinner();
-
-                    // Show the result
                     _showSnackBar(context, result);
 
-                    // Clear scores after a delay to ensure the correct result is shown
-                    Future.delayed(Duration(seconds: 2), () {
-                      setState(() {
-                        // Reset scores to 0 instead of clearing them
-                        scores = {
-                          teamName: 0,
-                          'Opposition': 0,
-                        };
-                        corners = {
-                          teamName: 0,
-                          'Opposition': 0,
-                        };
-                      });
+                    // Clear game progress
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setBool('gameInProgress', false);
+
+                    setState(() {
+                      scores = {teamName: 0, 'Opposition': 0};
+                      corners = {teamName: 0, 'Opposition': 0};
                     });
+                    saveGameScores();
                   },
                   child: Text('End Game'),
                 ),
@@ -522,14 +617,8 @@ class _SecondRouteState extends State<SecondRoute> {
         ],
       ),
     );
-  }
-}
 
-class ScreenArguments {
-  final String title;
-  final String message;
-  final String teamName;
-  ScreenArguments(this.title, this.message, this.teamName);
+  }
 }
 
 class TeamBuilder {
