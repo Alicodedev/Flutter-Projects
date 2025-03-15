@@ -38,14 +38,32 @@ class Home extends StatelessWidget {
         title: const Text('Charts Demo'),
       ),
       body: Center(
-        child: ElevatedButton(
-            onPressed:(){
-              Navigator.pushNamed(context, '/bar'); // Navigate to bar chart route
-            },
-            child: const Text('Go back Home') ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/bar');
+              },
+              child: const Text('Bar Chart'),
+            ),
+            SizedBox(height: 20), // Add some space between buttons
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/line');
+              },
+              child: const Text('Line Chart'),
+            ),
+            ElevatedButton(
+              onPressed: () {
 
 
-      )
+              },
+              child: const Text('Generate Random Students'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -238,9 +256,12 @@ class Student {
     var name = faker.person.firstName();
     return Student(name, id, _randomGrade(50, 100), _randomGrade(50, 100));
   }
-
   factory Student.randomFailing(int id) {
     var name = faker.person.firstName();
     return Student(name, id, _randomGrade(0, 50), _randomGrade(0, 50));
+  }
+  factory Student.randomExcellent(int id) {
+    var name = faker.person.firstName();
+    return Student(name, id, _randomGrade(90, 100), _randomGrade(90, 100));
   }
 }
