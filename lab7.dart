@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => Home(),
         '/bar': (context) => SimpleBarChart(),
         '/line': (context) => SimpleLineChart(),
+        '/pie': (context) => SimplePieChart(),
       },
       initialRoute: '/',
     );
@@ -57,20 +58,27 @@ class Home extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
+            ElevatedButton(// *** BAR CHART BUTTON
               onPressed: () {
                 Navigator.pushNamed(context, '/bar');
               },
               child: const Text('Bar Chart'),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
+            ElevatedButton( // *** LINE CHART BUTTON
               onPressed: () {
                 Navigator.pushNamed(context, '/line');
               },
               child: const Text('Line Chart'),
             ),
             SizedBox(height: 20),
+
+            ElevatedButton(// *** PIE Chart button
+              onPressed: () {
+                Navigator.pushNamed(context, '/pie');
+              },
+              child: const Text('Pie Chart'),
+            ),
             ElevatedButton(
               onPressed: () {
                 StudentData.generateStudents();
@@ -186,7 +194,7 @@ class _SimpleBarChartState extends State<SimpleBarChart> {
   }
 }
 
-  // Helper method to create legend items
+
   // Helper method to create legend items
   Widget _buildLegendItem(String label, material.Color color) {
   return Row(
@@ -239,7 +247,7 @@ class _LineChartState extends State<SimpleLineChart> {
       color: Colors.red,
       barWidth: 2,
       spots: minValues.asMap().entries.map((entry) {
-        return FlSpot(StudentData.students[entry.key].studentID.toDouble(), entry.value);
+        return FlSpot(entry.key.toDouble(), entry.value);
       }).toList(),
     );
 
@@ -249,7 +257,7 @@ class _LineChartState extends State<SimpleLineChart> {
       color: Colors.green,
       barWidth: 2,
       spots: maxValues.asMap().entries.map((entry) {
-        return FlSpot(StudentData.students[entry.key].studentID.toDouble(), entry.value);
+        return FlSpot(entry.key.toDouble(), entry.value);
       }).toList(),
     );
 
@@ -259,7 +267,7 @@ class _LineChartState extends State<SimpleLineChart> {
       color: Colors.blue,
       barWidth: 2,
       spots: avgValues.asMap().entries.map((entry) {
-        return FlSpot(StudentData.students[entry.key].studentID.toDouble(), entry.value);
+        return FlSpot(entry.key.toDouble(), entry.value);
       }).toList(),
     );
 
@@ -267,14 +275,12 @@ class _LineChartState extends State<SimpleLineChart> {
   }
 
   Widget getTitles(double value, TitleMeta meta) {
-    // Find student with matching ID
-    for (var student in StudentData.students) {
-      if (student.studentID == value.toInt()) {
-        return Text(
-          'ID: ${student.studentID}',
-          style: TextStyle(color: Colors.black)
-        );
-      }
+    int index = value.toInt();
+    if (index >= 0 && index < StudentData.students.length) {
+      return Text(
+        'ID: ${StudentData.students[index].studentID}',
+        style: TextStyle(color: Colors.black, fontSize: 10),
+      );
     }
     return Text('');
   }
@@ -314,12 +320,28 @@ class _LineChartState extends State<SimpleLineChart> {
                             showTitles: true,
                             getTitlesWidget: getTitles,
                             reservedSize: 30,
+                            interval: 1, // Ensure each student ID appears only once
                           ),
                         ),
                         topTitles: AxisTitles(
                           sideTitles: SideTitles(showTitles: false),
                         ),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                          ),
+                        ),
                       ),
+                      borderData: FlBorderData(show: true),
+                      gridData: FlGridData(show: true),
+                      minX: 0,
+                      maxX: (StudentData.students.length - 1).toDouble(),
+                      minY: 0,
+                      maxY: 100,
                     ),
                   )
                 : Text('Generate Students First'),
@@ -330,7 +352,6 @@ class _LineChartState extends State<SimpleLineChart> {
     );
   }
 
-  // Helper method to create legend items
   // Helper method to create legend items
   Widget _buildLegendItem(String label, material.Color color) {
     return Row(
@@ -346,8 +367,177 @@ class _LineChartState extends State<SimpleLineChart> {
     );
   }
 }
-
 // *** END LINE CHART ROUTE
+
+// *** PIE CHART ROUTE
+class SimplePieChart extends StatefulWidget {
+  @override
+  _PieChartState createState() => _PieChartState();
+}
+
+class _PieChartState extends State<SimplePieChart> {
+  late List<PieChartSectionData> dataList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    generateChartData();
+  }
+
+  void generateChartData() {
+    dataList.clear();
+
+    // Count students by status
+    int excellent = 0;
+    int pass = 0;
+    int fail = 0;
+
+    for (var student in StudentData.students) {
+      String status = student.status();
+      if (status == 'excellent') {
+        excellent++;
+      } else if (status == 'pass') {
+        pass++;
+      } else if (status == 'fail') {
+        fail++;
+      }
+    }
+
+    // Calculate total for percentage
+    int total = StudentData.students.length;
+
+    // Only add sections if we have students
+    if (total > 0) {
+      // Add excellent section
+      dataList.add(
+        PieChartSectionData(
+          color: Colors.green,
+          value: excellent.toDouble(),
+          title: '${(excellent / total * 100).toStringAsFixed(1)}%',
+          radius: 100,
+          titleStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+
+      // Add pass section
+      dataList.add(
+        PieChartSectionData(
+          color: Colors.blue,
+          value: pass.toDouble(),
+          title: '${(pass / total * 100).toStringAsFixed(1)}%',
+          radius: 100,
+          titleStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+
+      // Add fail section
+      dataList.add(
+        PieChartSectionData(
+          color: Colors.red,
+          value: fail.toDouble(),
+          title: '${(fail / total * 100).toStringAsFixed(1)}%',
+          radius: 100,
+          titleStyle: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Student Status Distribution')),
+      body: Column(
+        children: [
+          // Legend for the pie chart
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendItem('Excellent', Colors.green),
+                SizedBox(width: 16),
+                _buildLegendItem('Pass', Colors.blue),
+                SizedBox(width: 16),
+                _buildLegendItem('Fail', Colors.red),
+              ],
+            ),
+          ),
+          // Pie chart
+          Expanded(
+            child: Container(
+              width: 800,
+              padding: EdgeInsets.all(16),
+              child: StudentData.students.isNotEmpty
+                  ? PieChart(
+                PieChartData(
+                  sections: dataList,
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  startDegreeOffset: -90,
+                ),
+              )
+                  : Center(
+                child: Text(
+                  'Generate Students First',
+                  style: Theme
+                      .of(context)
+                      .textTheme
+                      .titleLarge,
+                ),
+              ),
+            ),
+          ),
+
+          if (StudentData.students.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Text(
+                    'Student Status Summary',
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .titleLarge,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Based on ${StudentData.students.length} students',
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .bodyLarge,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Excellent: ≥ 85% average, Pass: ≥ 50% average, Fail: < 50% average',
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+} // End of SimplePieChart
+
 class Student {
   static int count = 0;
   late String name;
