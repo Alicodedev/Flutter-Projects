@@ -1,6 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:faker/faker.dart';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Color;
+import 'package:flutter/material.dart' as material show Color;
 
 void main() {
   runApp(MyApp());
@@ -106,17 +109,19 @@ class _SimpleBarChartState extends State<SimpleBarChart> {
     for (int i = 0; i < StudentData.students.length; i++) {
       Student student = StudentData.students[i];
 
-      // dtermine color based on student status
-      BarChartGroupData barChartGroupData = BarChartGroupData(x: i,
+      // Include all 4 courses with different colors
+      BarChartGroupData barChartGroupData = BarChartGroupData(
+        x: i,
         barRods: [
           BarChartRodData(toY: student.mobile.toDouble(), color: Colors.red),
           BarChartRodData(toY: student.web.toDouble(), color: Colors.blue),
+          BarChartRodData(toY: student.programming.toDouble(), color: Colors.green),
+          BarChartRodData(toY: student.embedded.toDouble(), color: Colors.purple),
         ],
       );
       dataList.add(barChartGroupData);
     }
   }
-
 
   Widget getTitles(double value, TitleMeta meta) {
     return Text(
@@ -129,13 +134,31 @@ class _SimpleBarChartState extends State<SimpleBarChart> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Bar Chart')),
-      body: Center(
-        child: Container(
-          width: 800,
-          height: 900,
-          padding: EdgeInsets.all(16),
-          child: StudentData.students.isNotEmpty
-            ? BarChart(
+      body: Column(
+        children: [
+          // Legend for the bar chart
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendItem('Mobile', Colors.red),
+                SizedBox(width: 16),
+                _buildLegendItem('Web', Colors.blue),
+                SizedBox(width: 16),
+                _buildLegendItem('Programming', Colors.green),
+                SizedBox(width: 16),
+                _buildLegendItem('Embedded', Colors.purple),
+              ],
+            ),
+          ),
+          // Bar chart
+          Expanded(
+            child: Container(
+              width: 1000,
+              padding: EdgeInsets.all(16),
+              child: StudentData.students.isNotEmpty
+                  ? BarChart(
                 BarChartData(
                   barGroups: dataList,
                   titlesData: FlTitlesData(
@@ -154,11 +177,29 @@ class _SimpleBarChartState extends State<SimpleBarChart> {
                 duration: Duration(milliseconds: 150),
                 curve: Curves.linear,
               )
-            : Text('Generate Students First'),
-        ),
+                  : Text('Generate Students First'),
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+  // Helper method to create legend items
+  // Helper method to create legend items
+  Widget _buildLegendItem(String label, material.Color color) {
+  return Row(
+    children: [
+      Container(
+        width: 16,
+        height: 16,
+        color: color,
+      ),
+      SizedBox(width: 4),
+      Text(label),
+    ],
+  );
 }
 // *** END BAR CHART ROUTE
 
@@ -167,9 +208,8 @@ class _SimpleBarChartState extends State<SimpleBarChart> {
 class SimpleLineChart extends StatefulWidget {
   @override
   _LineChartState createState() => _LineChartState();
-
-
 }
+
 class _LineChartState extends State<SimpleLineChart> {
   late List<LineChartBarData> dataList = [];
 
@@ -182,70 +222,132 @@ class _LineChartState extends State<SimpleLineChart> {
   generateChartData() {
     dataList.clear(); // Clear previous data
 
-    // line data for mobile scores
-    var mobileScores = LineChartBarData(
+    // Calculate min, max, and average for all students
+    List<double> minValues = [];
+    List<double> maxValues = [];
+    List<double> avgValues = [];
+
+    for (var student in StudentData.students) {
+      minValues.add(student.minGrade().toDouble());
+      maxValues.add(student.maxGrade().toDouble());
+      avgValues.add(student.averageGrade());
+    }
+
+    // Line data for minimum grades
+    var minScores = LineChartBarData(
       isCurved: true,
       color: Colors.red,
       barWidth: 2,
-      spots: StudentData.students.asMap().entries.map((entry) {
-        return FlSpot(entry.key.toDouble(), entry.value.mobile.toDouble());
+      spots: minValues.asMap().entries.map((entry) {
+        return FlSpot(StudentData.students[entry.key].studentID.toDouble(), entry.value);
       }).toList(),
     );
 
-    // line data for web scores
-    var webScores = LineChartBarData(
+    // Line data for maximum grades
+    var maxScores = LineChartBarData(
+      isCurved: true,
+      color: Colors.green,
+      barWidth: 2,
+      spots: maxValues.asMap().entries.map((entry) {
+        return FlSpot(StudentData.students[entry.key].studentID.toDouble(), entry.value);
+      }).toList(),
+    );
+
+    // Line data for average grades
+    var avgScores = LineChartBarData(
       isCurved: true,
       color: Colors.blue,
       barWidth: 2,
-      spots: StudentData.students.asMap().entries.map((entry) {
-        return FlSpot(entry.key.toDouble(), entry.value.web.toDouble());
+      spots: avgValues.asMap().entries.map((entry) {
+        return FlSpot(StudentData.students[entry.key].studentID.toDouble(), entry.value);
       }).toList(),
     );
 
-    dataList = [mobileScores, webScores];
+    dataList = [minScores, maxScores, avgScores];
   }
 
   Widget getTitles(double value, TitleMeta meta) {
-    return Text(
-      StudentData.students[value.toInt()].name,
-      style: TextStyle(color: Colors.blue)
-    );
+    // Find student with matching ID
+    for (var student in StudentData.students) {
+      if (student.studentID == value.toInt()) {
+        return Text(
+          'ID: ${student.studentID}',
+          style: TextStyle(color: Colors.black)
+        );
+      }
+    }
+    return Text('');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Line Chart')),
-      body: Center(
-        child: Container(
-          width: 800,
-          height: 900,
-          padding: EdgeInsets.all(16),
-          child: StudentData.students.isNotEmpty
-            ? LineChart(
-                LineChartData(
-                  lineBarsData: dataList,
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        getTitlesWidget: getTitles,
-                        reservedSize: 30,
+      body: Column(
+        children: [
+          // Legend for the line chart
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendItem('Min Grade', Colors.red),
+                SizedBox(width: 16),
+                _buildLegendItem('Max Grade', Colors.green),
+                SizedBox(width: 16),
+                _buildLegendItem('Avg Grade', Colors.blue),
+              ],
+            ),
+          ),
+          // Line chart
+          Expanded(
+            child: Container(
+              width: 800,
+              padding: EdgeInsets.all(16),
+              child: StudentData.students.isNotEmpty
+                ? LineChart(
+                    LineChartData(
+                      lineBarsData: dataList,
+                      titlesData: FlTitlesData(
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: getTitles,
+                            reservedSize: 30,
+                          ),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
                       ),
                     ),
-                    topTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                  ),
-                ),
-              )
-            : Text('Generate Students First'),
-        ),
+                  )
+                : Text('Generate Students First'),
+            ),
+          ),
+        ],
       ),
     );
   }
-}// *** END LINE CHART ROUTE
 
+  // Helper method to create legend items
+  // Helper method to create legend items
+  Widget _buildLegendItem(String label, material.Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          color: color,
+        ),
+        SizedBox(width: 4),
+        Text(label),
+      ],
+    );
+  }
+}
+
+// *** END LINE CHART ROUTE
 class Student {
   static int count = 0;
   late String name;
